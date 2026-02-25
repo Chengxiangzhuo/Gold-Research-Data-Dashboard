@@ -173,13 +173,13 @@ export default function App() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               <MacroChart
                 seriesData={seriesData}
-                seriesIds={['GOLDAMGBD228NLBM', 'DFII10']}
+                seriesIds={['XAUUSD', 'DFII10']}
                 title="金价 vs 实际利率"
                 colors={['#d97706', '#dc2626']}
               />
               <MacroChart
                 seriesData={seriesData}
-                seriesIds={['GOLDAMGBD228NLBM', 'DTWEXBGS']}
+                seriesIds={['XAUUSD', 'DTWEXBGS']}
                 title="金价 vs 美元指数"
                 colors={['#d97706', '#2563eb']}
               />
@@ -229,7 +229,7 @@ export default function App() {
         {/* Footer */}
         <footer className="text-center py-6 border-t border-gray-200">
           <p className="text-xs text-gray-400">
-            Gold Research Dashboard &middot; 数据来源: GoldPrice.org, FRED (Federal Reserve Economic Data), ECB (Frankfurter API)
+            Gold Research Dashboard &middot; 数据来源: Binance (XAUUSDT), FreeGoldAPI, FRED, ECB (Frankfurter API)
           </p>
           <p className="text-xs text-gray-300 mt-1">
             免责声明：本仪表盘仅供研究参考，不构成任何投资建议。投资有风险，决策需谨慎。

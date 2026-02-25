@@ -86,12 +86,12 @@ export const FRED_SERIES: FredSeriesConfig[] = [
     impactOnGold: 'positive',
   },
   {
-    id: 'GOLDAMGBD228NLBM',
-    name: 'Gold Fixing Price (London AM)',
-    nameZh: '伦敦金早盘定盘价',
+    id: 'XAUUSD',
+    name: 'Gold Price (XAU/USD)',
+    nameZh: '黄金价格',
     unit: 'USD/Troy Ounce',
-    description: 'Gold Fixing Price in London Bullion Market (AM Fix)',
-    descriptionZh: '伦敦金银市场协会(LBMA)每日上午定盘价，全球黄金定价基准',
+    description: 'Gold spot price — FreeGoldAPI + Binance XAUUSDT',
+    descriptionZh: '黄金价格（美元/盎司），历史数据来源 FreeGoldAPI，近期数据来源币安 XAUUSDT 合约',
     impactOnGold: 'positive',
   },
   {
@@ -156,6 +156,9 @@ export async function fetchFredSeriesFull(
   };
 }
 
+/** IDs in FRED_SERIES that are NOT actual FRED series (fetched separately). */
+const NON_FRED_IDS = new Set(['XAUUSD']);
+
 export async function fetchMultipleFredSeries(
   seriesIds: string[],
   apiKey: string,
@@ -163,7 +166,9 @@ export async function fetchMultipleFredSeries(
 ): Promise<Map<string, FredSeriesData>> {
   const results = new Map<string, FredSeriesData>();
 
-  const promises = seriesIds.map(async (id) => {
+  const promises = seriesIds
+    .filter((id) => !NON_FRED_IDS.has(id))
+    .map(async (id) => {
     try {
       const data = await fetchFredSeriesFull(id, apiKey, startDate);
       return { id, data };

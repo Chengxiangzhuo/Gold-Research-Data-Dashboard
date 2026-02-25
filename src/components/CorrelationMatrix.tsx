@@ -38,7 +38,7 @@ export function CorrelationMatrix({ seriesData, goldData }: CorrelationMatrixPro
   const correlations = useMemo<CorrelationItem[]>(() => {
     if (goldData.length === 0) return [];
 
-    const excludeIds = new Set(['GOLDAMGBD228NLBM']);
+    const excludeIds = new Set(['XAUUSD']);
     const items: CorrelationItem[] = [];
 
     for (const [id, data] of seriesData) {

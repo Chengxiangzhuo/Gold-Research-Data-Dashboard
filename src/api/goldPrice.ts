@@ -1,5 +1,8 @@
 import axios from 'axios';
+import { fetchBinanceGoldPrice } from './binance';
 import type { GoldPrice, SilverPrice } from '../types';
+
+// --- Fallback: GoldPrice.org ---
 
 interface GoldPriceOrgResponse {
   items: Array<{
@@ -16,10 +19,10 @@ interface GoldPriceOrgResponse {
   }>;
 }
 
-export async function fetchGoldPriceOrg(): Promise<{ gold: GoldPrice; silver: SilverPrice }> {
+async function fetchGoldPriceOrg(): Promise<{ gold: GoldPrice; silver: SilverPrice }> {
   const response = await axios.get<GoldPriceOrgResponse>(
     '/api/goldprice/dbXRates/USD',
-    { timeout: 10000 }
+    { timeout: 10000 },
   );
 
   const item = response.data.items[0];
@@ -41,11 +44,18 @@ export async function fetchGoldPriceOrg(): Promise<{ gold: GoldPrice; silver: Si
   };
 }
 
+// --- Public: Binance primary, GoldPrice.org fallback ---
+
 export async function fetchGoldPrice(): Promise<{ gold: GoldPrice; silver: SilverPrice }> {
   try {
-    return await fetchGoldPriceOrg();
-  } catch (error) {
-    console.error('Gold price fetch failed:', error);
-    throw new Error('Unable to fetch gold price data. Please check your network connection.');
+    return await fetchBinanceGoldPrice();
+  } catch (binanceErr) {
+    console.warn('Binance gold price failed, falling back to GoldPrice.org:', binanceErr);
+    try {
+      return await fetchGoldPriceOrg();
+    } catch (fallbackErr) {
+      console.error('All gold price sources failed:', fallbackErr);
+      throw new Error('无法获取黄金实时价格，请检查网络连接。');
+    }
   }
 }

@@ -94,7 +94,7 @@ export function GoldPriceChart({ data, loading, timeRange, onTimeRangeChange }: 
     <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
         <div>
-          <h3 className="text-base font-semibold text-gray-900">伦敦金价格走势 (LBMA AM Fix)</h3>
+          <h3 className="text-base font-semibold text-gray-900">黄金价格走势 (XAU/USD)</h3>
           {stats && (
             <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1 text-xs text-gray-500">
               <span>最高: {formatCurrency(stats.max)}</span>

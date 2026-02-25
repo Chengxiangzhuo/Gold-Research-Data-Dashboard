@@ -66,8 +66,8 @@ export function PriceCard({ goldPrice, silverPrice, loading }: PriceCardProps) {
       {/* Gold Price */}
       <div className="bg-gradient-to-br from-yellow-50 to-amber-50 rounded-xl shadow-sm border border-yellow-200 p-5">
         <div className="flex items-center justify-between mb-1">
-          <span className="text-sm font-medium text-yellow-800">XAU/USD 现货黄金</span>
-          <span className="text-xs text-yellow-600/70">Troy Ounce</span>
+          <span className="text-sm font-medium text-yellow-800">XAU/USD 黄金</span>
+          <span className="text-xs text-yellow-600/70">Binance XAUUSDT</span>
         </div>
         <div className="text-3xl font-bold text-yellow-900 mb-2">
           {goldPrice ? formatCurrency(goldPrice.price) : '--'}

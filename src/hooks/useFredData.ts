@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { fetchMultipleFredSeries, FRED_SERIES } from '../api/fred';
+import { fetchGoldHistory } from '../api/goldHistory';
 import type { FredSeriesData, EconomicIndicator, ChartDataPoint } from '../types';
 import { getTimeRangeStartDate } from '../utils/formatters';
 import type { TimeRange } from '../types';
@@ -74,29 +75,43 @@ export function useFredData(apiKey: string, timeRange: TimeRange = '2Y'): UseFre
 
       const startDate = getTimeRangeStartDate(timeRange);
       const seriesIds = FRED_SERIES.map((s) => s.id);
-      const data = await fetchMultipleFredSeries(seriesIds, apiKey, startDate);
 
-      setSeriesData(data);
+      // Fetch FRED macro data and gold history in parallel
+      const [fredData, goldData] = await Promise.all([
+        fetchMultipleFredSeries(seriesIds, apiKey, startDate),
+        fetchGoldHistory(startDate).catch((err) => {
+          console.error('Gold history fetch failed:', err);
+          return [] as ChartDataPoint[];
+        }),
+      ]);
+
+      // Inject gold history into seriesData as 'XAUUSD'
+      if (goldData.length > 0) {
+        const goldConfig = FRED_SERIES.find((s) => s.id === 'XAUUSD');
+        fredData.set('XAUUSD', {
+          seriesId: 'XAUUSD',
+          title: goldConfig?.name ?? 'Gold Price',
+          observations: goldData.map((d) => ({
+            date: d.date,
+            value: String(d.value),
+          })),
+          units: 'USD/Troy Ounce',
+          frequency: 'Daily',
+          lastUpdated: goldData[goldData.length - 1].date,
+        });
+      }
+
+      setSeriesData(fredData);
 
       const indicatorList: EconomicIndicator[] = [];
-      for (const [id, seriesD] of data) {
+      for (const [id, seriesD] of fredData) {
         indicatorList.push(buildIndicator(id, seriesD));
       }
       setIndicators(indicatorList);
 
-      const goldData = data.get('GOLDAMGBD228NLBM');
-      if (goldData) {
-        setHistoricalGold(
-          goldData.observations
-            .filter((o) => o.value !== '.')
-            .map((o) => ({
-              date: o.date,
-              value: parseFloat(o.value),
-            }))
-        );
-      }
+      setHistoricalGold(goldData);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch FRED data');
+      setError(err instanceof Error ? err.message : 'Failed to fetch data');
     } finally {
       setLoading(false);
     }
