@@ -3,7 +3,7 @@ import type { GoldPrice, SilverPrice } from '../types';
 
 const BINANCE_FAPI = '/api/binance/fapi/v1';
 
-// --- 24hr Ticker (real-time price) ---
+// --- 24hr Ticker (real-time price with change info) ---
 
 interface Ticker24hr {
   symbol: string;
@@ -16,46 +16,85 @@ interface Ticker24hr {
   closeTime: number;
 }
 
+interface TickerPrice {
+  symbol: string;
+  price: string;
+  time: number;
+}
+
+function parseTicker24hr(data: Ticker24hr): GoldPrice {
+  return {
+    price: parseFloat(data.lastPrice),
+    currency: 'USD',
+    timestamp: data.closeTime,
+    change: parseFloat(data.priceChange),
+    changePercent: parseFloat(data.priceChangePercent),
+    high24h: parseFloat(data.highPrice),
+    low24h: parseFloat(data.lowPrice),
+    open: parseFloat(data.openPrice),
+  };
+}
+
+/** Full 24hr ticker — rich data (change, high, low, etc.) */
+async function fetchTicker24hr(symbol: string): Promise<Ticker24hr> {
+  const res = await axios.get<Ticker24hr>(`${BINANCE_FAPI}/ticker/24hr`, {
+    params: { symbol },
+    timeout: 10000,
+  });
+  return res.data;
+}
+
+/** Lightweight price ticker — fallback when 24hr is unavailable */
+async function fetchTickerPrice(symbol: string): Promise<TickerPrice> {
+  const res = await axios.get<TickerPrice>(`${BINANCE_FAPI}/ticker/price`, {
+    params: { symbol },
+    timeout: 10000,
+  });
+  return res.data;
+}
+
 export async function fetchBinanceGoldPrice(): Promise<{
   gold: GoldPrice;
   silver: SilverPrice;
 }> {
-  const [goldRes, silverRes] = await Promise.all([
-    axios.get<Ticker24hr>(`${BINANCE_FAPI}/ticker/24hr`, {
-      params: { symbol: 'XAUUSDT' },
-      timeout: 10000,
-    }),
-    axios
-      .get<Ticker24hr>(`${BINANCE_FAPI}/ticker/24hr`, {
-        params: { symbol: 'XAGUSDT' },
-        timeout: 10000,
-      })
-      .catch(() => null),
-  ]);
-
-  const g = goldRes.data;
-
-  const gold: GoldPrice = {
-    price: parseFloat(g.lastPrice),
-    currency: 'USD',
-    timestamp: g.closeTime,
-    change: parseFloat(g.priceChange),
-    changePercent: parseFloat(g.priceChangePercent),
-    high24h: parseFloat(g.highPrice),
-    low24h: parseFloat(g.lowPrice),
-    open: parseFloat(g.openPrice),
-  };
-
-  let silver: SilverPrice;
-  if (silverRes) {
-    const s = silverRes.data;
-    silver = {
-      price: parseFloat(s.lastPrice),
+  // Try 24hr ticker first (full data)
+  let gold: GoldPrice;
+  try {
+    const ticker = await fetchTicker24hr('XAUUSDT');
+    gold = parseTicker24hr(ticker);
+  } catch (err24hr) {
+    console.warn('[Binance] 24hr ticker failed, trying price ticker:', err24hr);
+    // Fallback: lightweight price endpoint
+    const priceTicker = await fetchTickerPrice('XAUUSDT');
+    gold = {
+      price: parseFloat(priceTicker.price),
       currency: 'USD',
-      timestamp: s.closeTime,
+      timestamp: priceTicker.time,
+      change: 0,
+      changePercent: 0,
     };
-  } else {
-    silver = { price: 0, currency: 'USD', timestamp: Date.now() };
+  }
+
+  // Silver (best-effort)
+  let silver: SilverPrice;
+  try {
+    const silverTicker = await fetchTicker24hr('XAGUSDT');
+    silver = {
+      price: parseFloat(silverTicker.lastPrice),
+      currency: 'USD',
+      timestamp: silverTicker.closeTime,
+    };
+  } catch {
+    try {
+      const silverPrice = await fetchTickerPrice('XAGUSDT');
+      silver = {
+        price: parseFloat(silverPrice.price),
+        currency: 'USD',
+        timestamp: silverPrice.time,
+      };
+    } catch {
+      silver = { price: 0, currency: 'USD', timestamp: Date.now() };
+    }
   }
 
   return { gold, silver };
