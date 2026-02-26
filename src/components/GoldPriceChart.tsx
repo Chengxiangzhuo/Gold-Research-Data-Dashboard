@@ -21,9 +21,9 @@ interface GoldPriceChartProps {
 }
 
 const TIME_RANGES: { value: TimeRange; label: string }[] = [
-  { value: '1M', label: '1日' },
-  { value: '3M', label: '1周' },
-  { value: '6M', label: '1月' },
+  { value: '1M', label: '日线' },
+  { value: '3M', label: '周线' },
+  { value: '6M', label: '月线' },
   { value: '1Y', label: '1年' },
   { value: '2Y', label: '2年' },
   { value: '5Y', label: '5年' },

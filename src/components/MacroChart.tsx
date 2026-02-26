@@ -74,6 +74,9 @@ export function MacroChart({
       .map(([date, values]) => ({ date, ...values }));
   }, [seriesData, seriesIds]);
 
+  // Use dual Y-axes when exactly 2 series (scales are often very different)
+  const dualAxis = seriesIds.length === 2;
+
   if (chartData.length === 0) {
     return (
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
@@ -90,7 +93,7 @@ export function MacroChart({
       <h3 className="text-sm font-semibold text-gray-900 mb-3">{title}</h3>
       <div style={{ height }}>
         <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={chartData} margin={{ top: 5, right: 5, left: 10, bottom: 5 }}>
+          <LineChart data={chartData} margin={{ top: 5, right: dualAxis ? 10 : 5, left: 10, bottom: 5 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
             <XAxis
               dataKey="date"
@@ -100,14 +103,43 @@ export function MacroChart({
               axisLine={{ stroke: '#e5e7eb' }}
               minTickGap={30}
             />
-            <YAxis
-              tick={{ fontSize: 10, fill: '#9ca3af' }}
-              tickLine={false}
-              axisLine={false}
-              domain={yAxisDomain ?? ['auto', 'auto']}
-              width={55}
-              tickFormatter={(v) => formatNumber(v, 1)}
-            />
+
+            {dualAxis ? (
+              <>
+                {/* Left axis — first series */}
+                <YAxis
+                  yAxisId="left"
+                  orientation="left"
+                  tick={{ fontSize: 10, fill: colors[0] }}
+                  tickLine={false}
+                  axisLine={false}
+                  domain={['auto', 'auto']}
+                  width={55}
+                  tickFormatter={(v) => formatNumber(v, 1)}
+                />
+                {/* Right axis — second series */}
+                <YAxis
+                  yAxisId="right"
+                  orientation="right"
+                  tick={{ fontSize: 10, fill: colors[1] }}
+                  tickLine={false}
+                  axisLine={false}
+                  domain={['auto', 'auto']}
+                  width={55}
+                  tickFormatter={(v) => formatNumber(v, 1)}
+                />
+              </>
+            ) : (
+              <YAxis
+                tick={{ fontSize: 10, fill: '#9ca3af' }}
+                tickLine={false}
+                axisLine={false}
+                domain={yAxisDomain ?? ['auto', 'auto']}
+                width={55}
+                tickFormatter={(v) => formatNumber(v, 1)}
+              />
+            )}
+
             <Tooltip content={<MacroTooltip />} />
             <Legend
               wrapperStyle={{ fontSize: '11px' }}
@@ -126,6 +158,7 @@ export function MacroChart({
                   strokeWidth={1.5}
                   dot={false}
                   connectNulls
+                  {...(dualAxis ? { yAxisId: i === 0 ? 'left' : 'right' } : {})}
                 />
               );
             })}
