@@ -191,9 +191,15 @@ export default function App() {
               />
               <MacroChart
                 seriesData={seriesData}
-                seriesIds={['CPIAUCSL', 'T10YIE']}
-                title="通胀: CPI vs 通胀预期"
-                colors={['#dc2626', '#f59e0b']}
+                seriesIds={['XAUUSD', 'CPIAUCSL']}
+                title="金价 vs CPI"
+                colors={['#d97706', '#dc2626']}
+              />
+              <MacroChart
+                seriesData={seriesData}
+                seriesIds={['XAUUSD', 'T10YIE']}
+                title="金价 vs 10年期通胀预期"
+                colors={['#d97706', '#f59e0b']}
               />
               <MacroChart
                 seriesData={seriesData}
