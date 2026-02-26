@@ -132,10 +132,38 @@ export async function fetchFredSeries(
   if (endDate) params.observation_end = endDate;
   if (frequency) params.frequency = frequency;
 
-  const response = await axios.get(FRED_BASE, { params });
-  return response.data.observations.filter(
-    (obs: FredObservation) => obs.value !== '.'
-  );
+  try {
+    const response = await axios.get(FRED_BASE, { params, timeout: 15000 });
+    return response.data.observations.filter(
+      (obs: FredObservation) => obs.value !== '.'
+    );
+  } catch (err: unknown) {
+    let detail = seriesId + ': ';
+    if (err && typeof err === 'object' && 'isAxiosError' in err) {
+      const axiosErr = err as {
+        code?: string;
+        message?: string;
+        response?: { status?: number; statusText?: string; data?: unknown };
+      };
+      if (axiosErr.response) {
+        const { status } = axiosErr.response;
+        if (status === 400) detail += 'Bad Request — API key 可能无效或 series_id 错误';
+        else if (status === 403) detail += '403 Forbidden — API key 被拒绝';
+        else if (status === 429) detail += '429 限流 — 请求过于频繁（FRED 限制 2次/秒）';
+        else detail += `HTTP ${status} ${axiosErr.response.statusText}`;
+      } else if (axiosErr.code === 'ECONNABORTED') {
+        detail += '请求超时（15s）';
+      } else if (axiosErr.code === 'ERR_NETWORK') {
+        detail += '网络不可达 — api.stlouisfed.org 可能被墙，需要 VPN';
+      } else {
+        detail += axiosErr.message ?? '未知错误';
+      }
+    } else {
+      detail += err instanceof Error ? err.message : String(err);
+    }
+    console.error(`[FRED] ${detail}`);
+    throw new Error(detail);
+  }
 }
 
 export async function fetchFredSeriesFull(
@@ -165,15 +193,15 @@ export async function fetchMultipleFredSeries(
   startDate?: string
 ): Promise<Map<string, FredSeriesData>> {
   const results = new Map<string, FredSeriesData>();
+  const errors: string[] = [];
 
-  const promises = seriesIds
-    .filter((id) => !NON_FRED_IDS.has(id))
-    .map(async (id) => {
+  const fredIds = seriesIds.filter((id) => !NON_FRED_IDS.has(id));
+  const promises = fredIds.map(async (id) => {
     try {
       const data = await fetchFredSeriesFull(id, apiKey, startDate);
       return { id, data };
     } catch (error) {
-      console.error(`Failed to fetch FRED series ${id}:`, error);
+      errors.push(error instanceof Error ? error.message : `${id}: unknown`);
       return { id, data: null };
     }
   });
@@ -183,6 +211,17 @@ export async function fetchMultipleFredSeries(
     if (result.data) {
       results.set(result.id, result.data);
     }
+  }
+
+  if (errors.length > 0) {
+    console.error(
+      `[FRED] ${errors.length}/${fredIds.length} 个指标获取失败:\n` +
+        errors.map((e) => `  → ${e}`).join('\n') +
+        '\n排查建议:\n' +
+        '  1) 浏览器打开 https://api.stlouisfed.org/fred/series/observations?series_id=FEDFUNDS&api_key=YOUR_KEY&file_type=json 检查能否访问\n' +
+        '  2) 确认 FRED API Key 有效（32位小写字母+数字）\n' +
+        '  3) 如在中国大陆，api.stlouisfed.org 可能需要 VPN',
+    );
   }
 
   return results;
